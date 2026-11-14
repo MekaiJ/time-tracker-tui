@@ -13,7 +13,6 @@ int main() {
     struct Activity act = {"learn", fopen("learn-file.txt", "w")}; // init our activity struct
     write_time(&act, 15); // call function to write a time to the associated file
     FILE *read_fp = fopen("learn-file.txt", "r"); // open the file for reading
-                                                  //
     // init the variables we will store our read data into
     char name[128];
     int time;
