@@ -1,24 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
+#include <signal.h>
 
-int main() {
-    time_t start, end;
+volatile sig_atomic_t running = 1;
+
+void write_time(int elapsed, char *activity);
+
+void stop_timer(int sig) {
+    running = 0; // Flip flag when Ctrl+C is pressed
+}
+
+void start_timer(void) {
+    time_t start, now;
+    int elapsed = 0;
 
     printf("Press ENTER to start the stopwatch...");
-    getchar(); // Wait for Enter key
+    getchar();
+
+    signal(SIGINT, stop_timer); // Listen for Ctrl+C
     time(&start);
+    printf("Stopwatch running! Press Ctrl+C to stop...\n");
 
-    printf("Stopwatch running! Press ENTER to stop...");
-    getchar(); // Wait for Enter key again
-    time(&end);
+    while (running) {
+        time(&now);
+        elapsed = (int)difftime(now, start);
+        printf("\rElapsed Time: %02d:%02d (%d total seconds)   ", elapsed / 60, elapsed % 60, elapsed);
+        fflush(stdout);
+        sleep(1); // Wait 1 second
+    }
 
-    double elapsed = difftime(end, start);
-    int minutes = (int)elapsed / 60;
-    int seconds = (int)elapsed % 60;
+    write_time(elapsed, "learn");
+    printf("\nStopwatch stopped!\n");
+}
 
-    printf("\nElapsed Time: %02d:%02d (%.0f total seconds)\n", minutes, seconds, elapsed);
+void write_time(int elapsed, char *activity) {
+    char name[128];
+    int minutes = 0;
+    int seconds = 0;
 
+    FILE *readfp = fopen("study.txt", "r");
+    if (readfp != NULL) {
+        fscanf(readfp, "Activity: %127[^,], Time: %d:%d", name, &minutes, &seconds);
+        fclose(readfp);
+    }
+
+    int total_seconds = (minutes * 60) + seconds + elapsed;
+
+    FILE *writefp = fopen("study.txt", "w");
+    if (writefp != NULL) {
+        fprintf(writefp, "Activity: %s, Time: %02d:%02d\n", activity, total_seconds / 60, total_seconds % 60);
+        fclose(writefp);
+    }
+}
+int main(void) {
+    start_timer();
     return 0;
 }
 
